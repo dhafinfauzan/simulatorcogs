@@ -26,9 +26,11 @@ export function calculate(input, bepThreshold = 10) {
   const {
     scheme, totalUnit, programPeriod, cogs,
     otcPrice = 0, dailyFee = 0, dailyIncentive = 0,
+    setupFee = 0,
     activeDays = 22, activeRate = 50
   } = input
 
+  const numSetupFee = Number(setupFee) || 0
   const activeRatePct = activeRate / 100
   const grossMRC = dailyFee * activeDays
   const salesIncentivePerMonth = dailyIncentive * activeDays
@@ -38,6 +40,7 @@ export function calculate(input, bepThreshold = 10) {
 
   let result = {
     scheme, totalUnit, programPeriod, cogs,
+    setupFee: fmtNum(numSetupFee),
     grossMRC: fmtNum(grossMRC),
     salesIncentivePerMonth: fmtNum(salesIncentivePerMonth),
     netMRC: fmtNum(netMRC),
@@ -89,45 +92,72 @@ export function calculate(input, bepThreshold = 10) {
   }
 
   else if (scheme === 'mrc') {
-    const bepMonths = safeDiv(cogs, expectedNetMRC)
-    const marginPerDevice = (expectedNetMRC * programPeriod) - cogs
+    const remainingCogs = Math.max(0, cogs - numSetupFee)
+    const marginPerDevice = numSetupFee + (expectedNetMRC * programPeriod) - cogs
     const totalMargin = marginPerDevice * totalUnit
-    // Net revenue = gross MRC minus sales incentive, adjusted by active rate
-    const totalMRCRevenue = netMRC * activeRatePct * programPeriod * totalUnit
+    // Total Revenue = Setup Fee upfront revenue + recurring Net MRC revenue
+    const totalMRCRevenue = (numSetupFee * totalUnit) + (netMRC * activeRatePct * programPeriod * totalUnit)
     const totalCost = cogs * totalUnit
+    const marginPct = safeDiv(totalMargin, totalCost)
 
+    let bepMonths = null
     let bepLabel, feasibility, feasibilityReason
 
-    if (bepMonths === null) {
+    if (numSetupFee >= cogs && cogs > 0) {
+      bepMonths = 0
+      bepLabel = 'Immediate / Month 0'
+      feasibility = 'layak'
+      feasibilityReason = 'Setup Fee (DP) di awal sudah menutup seluruh modal COGS sejak hari pertama.'
+    } else if (expectedNetMRC <= 0) {
+      bepMonths = null
       bepLabel = 'Not Reached'
       feasibility = 'tidak_layak'
       feasibilityReason = 'Expected Net MRC is zero or negative, BEP cannot be reached.'
-    } else if (bepMonths < bepThreshold) {
-      bepLabel = `${fmtBEP(bepMonths)} months`
-      feasibility = 'layak'
-      feasibilityReason = `BEP ${fmtBEP(bepMonths)} months, below the feasibility threshold of ${bepThreshold} months.`
     } else {
-      bepLabel = `${fmtBEP(bepMonths)} months`
-      feasibility = 'tidak_layak'
-      feasibilityReason = `BEP ${fmtBEP(bepMonths)} months. Exceeds the financial feasibility threshold of ${bepThreshold} months.`
+      bepMonths = safeDiv(remainingCogs, expectedNetMRC)
+      if (bepMonths === null) {
+        bepLabel = 'Not Reached'
+        feasibility = 'tidak_layak'
+        feasibilityReason = 'Expected Net MRC is zero or negative, BEP cannot be reached.'
+      } else if (bepMonths < bepThreshold) {
+        bepLabel = `${fmtBEP(bepMonths)} months`
+        feasibility = 'layak'
+        feasibilityReason = `BEP ${fmtBEP(bepMonths)} months, below the feasibility threshold of ${bepThreshold} months.`
+      } else {
+        bepLabel = `${fmtBEP(bepMonths)} months`
+        feasibility = 'tidak_layak'
+        feasibilityReason = `BEP ${fmtBEP(bepMonths)} months. Exceeds the financial feasibility threshold of ${bepThreshold} months.`
+      }
     }
+
+    const breakdownSteps = [
+      `Gross MRC/active device/month = Daily Fee (${fmtRp(dailyFee)}) × Active Days (${activeDays}) = ${fmtRp(grossMRC)}`,
+      `Sales Incentive/active device/month = Daily Incentive (${fmtRp(dailyIncentive)}) × Active Days (${activeDays}) = ${fmtRp(salesIncentivePerMonth)}`,
+      `Net MRC/active device/month = Gross MRC - Incentive = ${fmtRp(netMRC)}`,
+      `Expected Net MRC/deployed device/month = Net MRC × Active Rate (${activeRate}%) = ${fmtRp(expectedNetMRC)}`
+    ]
+
+    if (numSetupFee > 0) {
+      breakdownSteps.push(`Setup Fee (DP) per Device = ${fmtRp(numSetupFee)}`)
+      breakdownSteps.push(`Sisa COGS yang perlu ditutup = COGS (${fmtRp(cogs)}) - Setup Fee (${fmtRp(numSetupFee)}) = ${fmtRp(remainingCogs)}`)
+      breakdownSteps.push(`BEP = Sisa COGS (${fmtRp(remainingCogs)}) ÷ Expected Net MRC (${fmtRp(expectedNetMRC)}) = ${bepMonths !== null ? fmtBEP(bepMonths) + ' months' : 'Not Reached'}`)
+      breakdownSteps.push(`Margin per Device = Setup Fee (${fmtRp(numSetupFee)}) + (Expected Net MRC × ${programPeriod} months) - COGS (${fmtRp(cogs)}) = ${fmtRp(marginPerDevice)}`)
+    } else {
+      breakdownSteps.push(`BEP = COGS (${fmtRp(cogs)}) ÷ Expected Net MRC (${fmtRp(expectedNetMRC)}) = ${bepMonths !== null ? fmtBEP(bepMonths) + ' months' : 'Not Reached'}`)
+      breakdownSteps.push(`Margin per Device = (Expected Net MRC × ${programPeriod} months) - COGS (${fmtRp(cogs)}) = ${fmtRp(marginPerDevice)}`)
+    }
+
+    breakdownSteps.push(`Total Margin = Margin per Device (${fmtRp(marginPerDevice)}) × Total Unit (${totalUnit}) = ${fmtRp(totalMargin)}`)
 
     Object.assign(result, {
       totalRevenue: fmtNum(totalMRCRevenue),
       totalCost: fmtNum(totalCost),
       totalMargin: fmtNum(totalMargin),
       marginPerDevice: fmtNum(marginPerDevice),
+      marginPct: fmtNum(marginPct !== null ? marginPct * 100 : null),
       bepMonths: bepMonths !== null ? fmtNum(bepMonths) : null,
       bepLabel, feasibility, feasibilityReason,
-      breakdown: [
-        `Gross MRC/active device/month = Daily Fee (${fmtRp(dailyFee)}) × Active Days (${activeDays}) = ${fmtRp(grossMRC)}`,
-        `Sales Incentive/active device/month = Daily Incentive (${fmtRp(dailyIncentive)}) × Active Days (${activeDays}) = ${fmtRp(salesIncentivePerMonth)}`,
-        `Net MRC/active device/month = Gross MRC - Incentive = ${fmtRp(netMRC)}`,
-        `Expected Net MRC/deployed device/month = Net MRC × Active Rate (${activeRate}%) = ${fmtRp(expectedNetMRC)}`,
-        `BEP = COGS (${fmtRp(cogs)}) ÷ Expected Net MRC (${fmtRp(expectedNetMRC)}) = ${bepMonths !== null ? fmtBEP(bepMonths) + ' months' : 'Not Reached'}`,
-        `Margin per Device = (Expected Net MRC × ${programPeriod} months) - COGS = ${fmtRp(marginPerDevice)}`,
-        `Total Margin = ${fmtRp(totalMargin)}`
-      ]
+      breakdown: breakdownSteps
     })
   }
 
@@ -139,6 +169,7 @@ export function validateInput(input) {
   if (!input.totalUnit || input.totalUnit <= 0) errors.push('Total unit must be greater than 0.')
   if (input.cogs < 0) errors.push('COGS cannot be negative.')
   if (input.otcPrice < 0) errors.push('OTC price cannot be negative.')
+  if (input.setupFee < 0) errors.push('Setup fee / DP cannot be negative.')
   if (input.dailyFee < 0) errors.push('Daily fee cannot be negative.')
   if (input.dailyIncentive < 0) errors.push('Daily incentive cannot be negative.')
   if (input.activeDays < 1 || input.activeDays > 31) errors.push('Active days must be between 1 and 31.')

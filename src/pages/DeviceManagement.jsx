@@ -220,6 +220,7 @@ function DeviceModal({ device, onClose, onSaved }) {
     mrc_enabled: device?.mrc_enabled ?? 1,
     default_daily_fee: device?.default_daily_fee || 0,
     default_daily_incentive: device?.default_daily_incentive || 0,
+    default_setup_fee: device?.default_setup_fee || 0,
     default_active_days: device?.default_active_days || 22,
     default_active_rate: device?.default_active_rate || 50,
     default_program_period: device?.default_program_period || 12
@@ -331,10 +332,10 @@ function DeviceModal({ device, onClose, onSaved }) {
                 <input type="number" min="1" max="31" value={form.default_active_days} onChange={e => update('default_active_days', Number(e.target.value))} className="input-field" disabled={!form.mrc_enabled} />
               </div>
               <div>
-                <label className="input-label">Active Device Rate (%)</label>
-                <input type="number" min="0" max="100" value={form.default_active_rate} onChange={e => update('default_active_rate', Number(e.target.value))} className="input-field" disabled={!form.mrc_enabled} />
+                <label className="input-label">Default Setup Fee / DP (Rp)</label>
+                <input type="number" min="0" value={form.default_setup_fee} onChange={e => update('default_setup_fee', Number(e.target.value))} className="input-field" placeholder="0 (Optional)" disabled={!form.mrc_enabled} />
               </div>
-              <div className="col-span-1 sm:col-span-2">
+              <div>
                 <label className="input-label">Default Program Period</label>
                 <select value={form.default_program_period} onChange={e => update('default_program_period', Number(e.target.value))} className="input-field">
                   <option value={12}>12 months</option>

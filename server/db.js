@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS devices (
   default_daily_incentive REAL NOT NULL DEFAULT 0,
   default_active_days INTEGER NOT NULL DEFAULT 22,
   default_active_rate REAL NOT NULL DEFAULT 50,
+  default_setup_fee REAL NOT NULL DEFAULT 0,
   default_program_period INTEGER NOT NULL DEFAULT 12,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -56,6 +57,7 @@ CREATE TABLE IF NOT EXISTS simulations (
   otc_price REAL,
   daily_fee REAL,
   daily_incentive REAL,
+  setup_fee REAL DEFAULT 0,
   active_days INTEGER,
   active_rate REAL,
   result_json TEXT NOT NULL,
@@ -70,10 +72,13 @@ const upsertSetting = db.prepare(`
 `)
 upsertSetting.run('bep_threshold_months', '10')
 
-// --- Migration: add cogs_mrc column if missing ---
+// --- Migrations: add columns if missing ---
 const cols = db.prepare("PRAGMA table_info(devices)").all()
 if (!cols.some(c => c.name === 'cogs_mrc')) {
   db.exec('ALTER TABLE devices ADD COLUMN cogs_mrc REAL NOT NULL DEFAULT 0')
+}
+if (!cols.some(c => c.name === 'default_setup_fee')) {
+  db.exec('ALTER TABLE devices ADD COLUMN default_setup_fee REAL NOT NULL DEFAULT 0')
 }
 
 export default db

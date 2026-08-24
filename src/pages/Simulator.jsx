@@ -32,6 +32,7 @@ export default function Simulator() {
   const [otcPrice, setOtcPrice] = useState(0)
   const [dailyFee, setDailyFee] = useState(0)
   const [dailyIncentive, setDailyIncentive] = useState(0)
+  const [setupFee, setSetupFee] = useState(0)
   const [activeDays, setActiveDays] = useState(22)
   const [activeRate, setActiveRate] = useState(50)
 
@@ -57,12 +58,14 @@ export default function Simulator() {
     const d = devices.find(d => String(d.id) === String(id))
     if (!d) {
       setCogs(0)
+      setSetupFee(0)
       return
     }
     setCogs(scheme === 'mrc' ? d.cogs_mrc : d.cogs)
     setOtcPrice(d.default_otc_price)
     setDailyFee(d.default_daily_fee)
     setDailyIncentive(d.default_daily_incentive)
+    setSetupFee(d.default_setup_fee || 0)
     setActiveDays(d.default_active_days)
     setActiveRate(d.default_active_rate)
     setProgramPeriod(d.default_program_period === 24 ? 24 : 12)
@@ -76,6 +79,7 @@ export default function Simulator() {
     setOtcPrice(0)
     setDailyFee(0)
     setDailyIncentive(0)
+    setSetupFee(0)
     setActiveDays(22)
     setActiveRate(50)
     setResult(null)
@@ -95,6 +99,7 @@ export default function Simulator() {
         otcPrice: Number(otcPrice),
         dailyFee: Number(dailyFee),
         dailyIncentive: Number(dailyIncentive),
+        setupFee: Number(setupFee || 0),
         activeDays: Number(activeDays),
         activeRate: Number(activeRate)
       })
@@ -109,7 +114,7 @@ export default function Simulator() {
     } finally {
       setLoading(false)
     }
-  }, [scheme, totalUnit, programPeriod, cogs, otcPrice, dailyFee, dailyIncentive, activeDays, activeRate])
+  }, [scheme, totalUnit, programPeriod, cogs, otcPrice, dailyFee, dailyIncentive, setupFee, activeDays, activeRate])
 
   const calcTimer = useRef(null)
   useEffect(() => {
@@ -117,7 +122,7 @@ export default function Simulator() {
     clearTimeout(calcTimer.current)
     calcTimer.current = setTimeout(() => calculate(), 400)
     return () => clearTimeout(calcTimer.current)
-  }, [scheme, totalUnit, programPeriod, cogs, otcPrice, dailyFee, dailyIncentive, activeDays, activeRate, hasCalculated, calculate])
+  }, [scheme, totalUnit, programPeriod, cogs, otcPrice, dailyFee, dailyIncentive, setupFee, activeDays, activeRate, hasCalculated, calculate])
 
   const showOtc = scheme === 'otc'
   const showMrc = scheme === 'mrc'
@@ -217,6 +222,23 @@ export default function Simulator() {
                       <option value={24}>24 months</option>
                     </select>
                   </div>
+                  <div className="col-span-2">
+                    <label className="input-label flex items-center justify-between">
+                      <span>Setup Fee / DP per Unit (Rp)</span>
+                      <span className="text-[11px] font-medium text-brand-600 bg-brand-50 border border-brand-200 px-2 py-0.5 rounded-full">Opsional</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={setupFee || ''}
+                      onChange={e => setSetupFee(e.target.value === '' ? 0 : e.target.value)}
+                      placeholder="0 (Tanpa DP di awal)"
+                      className="input-field font-mono"
+                    />
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      Biaya di awal per unit untuk mempercepat pengembalian modal (BEP).
+                    </p>
+                  </div>
                   <div>
                     <label className="input-label">Daily Fee (Rp)</label>
                     <input type="number" min="0" value={dailyFee} onChange={e => setDailyFee(e.target.value)} className="input-field font-mono" />
@@ -309,6 +331,15 @@ export default function Simulator() {
                       color="slate"
                       sublabel={`from ${totalUnit} units`}
                     />
+                    {result.setupFee > 0 && (
+                      <StatCard
+                        icon={DollarSign}
+                        label="Setup Fee (DP)"
+                        value={fmtRp(result.setupFee)}
+                        color="brand"
+                        sublabel="Upfront per device"
+                      />
+                    )}
                   </>
                 )}
                 {result.marginPct !== null && (

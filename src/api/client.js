@@ -3,7 +3,7 @@ import { calculate as clientCalculate, validateInput as clientValidateInput } fr
 const API_BASE = '/api'
 const tokenKey = 'appmodel_token'
 const userKey = 'appmodel_user'
-const devicesKey = 'appmodel_devices_v1'
+const devicesKey = 'appmodel_devices_v2'
 const settingsKey = 'appmodel_settings_v1'
 
 export function getToken() {
@@ -21,16 +21,16 @@ export function clearToken() {
 
 // Initial 10 devices fallback for standalone/Vercel static deployment
 const DEFAULT_DEVICES = [
-  { id: 1, device_id: '5M', device_name: 'Device 5M', status: 'Active', cogs: 200000, cogs_mrc: 200000, otc_enabled: 1, default_otc_price: 225000, mrc_enabled: 1, default_daily_fee: 1500, default_daily_incentive: 500, default_active_days: 22, default_active_rate: 50, default_program_period: 12 },
-  { id: 2, device_id: 'QS6', device_name: 'Soundbox QS6', status: 'Active', cogs: 323441, cogs_mrc: 383441, otc_enabled: 1, default_otc_price: 375000, mrc_enabled: 1, default_daily_fee: 2000, default_daily_incentive: 700, default_active_days: 22, default_active_rate: 50, default_program_period: 12 },
-  { id: 3, device_id: 'QS5M', device_name: 'Soundbox QS5M', status: 'Active', cogs: 319200, cogs_mrc: 379200, otc_enabled: 1, default_otc_price: 350000, mrc_enabled: 1, default_daily_fee: 1800, default_daily_incentive: 600, default_active_days: 22, default_active_rate: 50, default_program_period: 12 },
-  { id: 4, device_id: 'QS2', device_name: 'Soundbox QS2', status: 'Active', cogs: 318203, cogs_mrc: 493203, otc_enabled: 1, default_otc_price: 475000, mrc_enabled: 1, default_daily_fee: 2700, default_daily_incentive: 900, default_active_days: 22, default_active_rate: 50, default_program_period: 12 },
-  { id: 5, device_id: 'QS3D', device_name: 'Soundbox QS3D', status: 'Active', cogs: 446250, cogs_mrc: 566250, otc_enabled: 1, default_otc_price: 599000, mrc_enabled: 1, default_daily_fee: 3000, default_daily_incentive: 1000, default_active_days: 22, default_active_rate: 50, default_program_period: 12 },
-  { id: 6, device_id: 'P5K', device_name: 'EDC P5K 8GB', status: 'Active', cogs: 1268438, cogs_mrc: 1628438, otc_enabled: 1, default_otc_price: 1750000, mrc_enabled: 1, default_daily_fee: 8000, default_daily_incentive: 2700, default_active_days: 22, default_active_rate: 50, default_program_period: 12 },
-  { id: 7, device_id: 'P5SE', device_name: 'EDC P5SE', status: 'Active', cogs: 1631438, cogs_mrc: 2051438, otc_enabled: 1, default_otc_price: 2250000, mrc_enabled: 1, default_daily_fee: 11000, default_daily_incentive: 3700, default_active_days: 22, default_active_rate: 50, default_program_period: 12 },
-  { id: 8, device_id: 'Q3 MINI', device_name: 'EDC Q3 Mini', status: 'Active', cogs: 959888, cogs_mrc: 1259888, otc_enabled: 1, default_otc_price: 1499000, mrc_enabled: 1, default_daily_fee: 6800, default_daily_incentive: 2300, default_active_days: 22, default_active_rate: 50, default_program_period: 12 },
-  { id: 9, device_id: 'Q3', device_name: 'EDC Q3', status: 'Active', cogs: 1685888, cogs_mrc: 2082675, otc_enabled: 1, default_otc_price: 2399000, mrc_enabled: 1, default_daily_fee: 11000, default_daily_incentive: 3700, default_active_days: 22, default_active_rate: 50, default_program_period: 12 },
-  { id: 10, device_id: 'Q2', device_name: 'EDC Q2', status: 'Active', cogs: 2266688, cogs_mrc: 2746688, otc_enabled: 1, default_otc_price: 2850000, mrc_enabled: 1, default_daily_fee: 13600, default_daily_incentive: 4500, default_active_days: 22, default_active_rate: 50, default_program_period: 12 }
+  { id: 1, device_id: '5M', device_name: 'Device 5M', status: 'Active', cogs: 200000, cogs_mrc: 200000, otc_enabled: 1, default_otc_price: 225000, mrc_enabled: 1, default_daily_fee: 1500, default_daily_incentive: 500, default_setup_fee: 0, default_active_days: 22, default_active_rate: 50, default_program_period: 12 },
+  { id: 2, device_id: 'QS6', device_name: 'Soundbox QS6', status: 'Active', cogs: 323441, cogs_mrc: 383441, otc_enabled: 1, default_otc_price: 375000, mrc_enabled: 1, default_daily_fee: 2000, default_daily_incentive: 700, default_setup_fee: 0, default_active_days: 22, default_active_rate: 50, default_program_period: 12 },
+  { id: 3, device_id: 'QS5M', device_name: 'Soundbox QS5M', status: 'Active', cogs: 319200, cogs_mrc: 379200, otc_enabled: 1, default_otc_price: 350000, mrc_enabled: 1, default_daily_fee: 1800, default_daily_incentive: 600, default_setup_fee: 0, default_active_days: 22, default_active_rate: 50, default_program_period: 12 },
+  { id: 4, device_id: 'QS2', device_name: 'Soundbox QS2', status: 'Active', cogs: 318203, cogs_mrc: 493203, otc_enabled: 1, default_otc_price: 475000, mrc_enabled: 1, default_daily_fee: 2700, default_daily_incentive: 900, default_setup_fee: 0, default_active_days: 22, default_active_rate: 50, default_program_period: 12 },
+  { id: 5, device_id: 'QS3D', device_name: 'Soundbox QS3D', status: 'Active', cogs: 446250, cogs_mrc: 566250, otc_enabled: 1, default_otc_price: 599000, mrc_enabled: 1, default_daily_fee: 3000, default_daily_incentive: 1000, default_setup_fee: 0, default_active_days: 22, default_active_rate: 50, default_program_period: 12 },
+  { id: 6, device_id: 'P5K', device_name: 'EDC P5K 8GB', status: 'Active', cogs: 1268438, cogs_mrc: 1628438, otc_enabled: 1, default_otc_price: 1750000, mrc_enabled: 1, default_daily_fee: 8000, default_daily_incentive: 2700, default_setup_fee: 0, default_active_days: 22, default_active_rate: 50, default_program_period: 12 },
+  { id: 7, device_id: 'P5SE', device_name: 'EDC P5SE', status: 'Active', cogs: 1631438, cogs_mrc: 2051438, otc_enabled: 1, default_otc_price: 2250000, mrc_enabled: 1, default_daily_fee: 11000, default_daily_incentive: 3700, default_setup_fee: 0, default_active_days: 22, default_active_rate: 50, default_program_period: 12 },
+  { id: 8, device_id: 'Q3 MINI', device_name: 'EDC Q3 Mini', status: 'Active', cogs: 959888, cogs_mrc: 1259888, otc_enabled: 1, default_otc_price: 1499000, mrc_enabled: 1, default_daily_fee: 6800, default_daily_incentive: 2300, default_setup_fee: 0, default_active_days: 22, default_active_rate: 50, default_program_period: 12 },
+  { id: 9, device_id: 'Q3', device_name: 'EDC Q3', status: 'Active', cogs: 1685888, cogs_mrc: 2082675, otc_enabled: 1, default_otc_price: 2399000, mrc_enabled: 1, default_daily_fee: 11000, default_daily_incentive: 3700, default_setup_fee: 0, default_active_days: 22, default_active_rate: 50, default_program_period: 12 },
+  { id: 10, device_id: 'Q2', device_name: 'EDC Q2', status: 'Active', cogs: 2266688, cogs_mrc: 2746688, otc_enabled: 1, default_otc_price: 2850000, mrc_enabled: 1, default_daily_fee: 13600, default_daily_incentive: 4500, default_setup_fee: 0, default_active_days: 22, default_active_rate: 50, default_program_period: 12 }
 ]
 
 function getLocalDevices() {

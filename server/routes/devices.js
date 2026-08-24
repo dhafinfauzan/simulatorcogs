@@ -47,14 +47,14 @@ router.post('/', requireAdmin, (req, res) => {
         device_id, device_name, status, cogs, cogs_mrc,
         otc_enabled, default_otc_price,
         mrc_enabled, default_daily_fee, default_daily_incentive,
-        default_active_days, default_active_rate, default_program_period
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        default_setup_fee, default_active_days, default_active_rate, default_program_period
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
     const result = stmt.run(
       d.device_id, d.device_name, d.status || 'Active', d.cogs || 0, d.cogs_mrc || d.cogs || 0,
       d.otc_enabled ? 1 : 0, d.default_otc_price || 0,
       d.mrc_enabled ? 1 : 0, d.default_daily_fee || 0, d.default_daily_incentive || 0,
-      d.default_active_days || 22, d.default_active_rate || 50, d.default_program_period || 12
+      d.default_setup_fee || 0, d.default_active_days || 22, d.default_active_rate || 50, d.default_program_period || 12
     )
     res.status(201).json({ id: result.lastInsertRowid, message: 'Device added successfully.' })
   } catch (err) {
@@ -77,14 +77,14 @@ router.put('/:id', requireAdmin, (req, res) => {
         device_id = ?, device_name = ?, status = ?, cogs = ?, cogs_mrc = ?,
         otc_enabled = ?, default_otc_price = ?,
         mrc_enabled = ?, default_daily_fee = ?, default_daily_incentive = ?,
-        default_active_days = ?, default_active_rate = ?, default_program_period = ?,
+        default_setup_fee = ?, default_active_days = ?, default_active_rate = ?, default_program_period = ?,
         updated_at = datetime('now')
       WHERE id = ?
     `).run(
       d.device_id, d.device_name, d.status, d.cogs, d.cogs_mrc !== undefined ? d.cogs_mrc : d.cogs,
       d.otc_enabled ? 1 : 0, d.default_otc_price,
       d.mrc_enabled ? 1 : 0, d.default_daily_fee, d.default_daily_incentive,
-      d.default_active_days, d.default_active_rate, d.default_program_period,
+      d.default_setup_fee || 0, d.default_active_days, d.default_active_rate, d.default_program_period,
       req.params.id
     )
     res.json({ message: 'Device berhasil diperbarui.' })
