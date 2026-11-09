@@ -6,9 +6,9 @@ import {
 import { api } from '../api/client.js'
 import { StatusBadge, BEPCard } from '../components/StatusBadge.jsx'
 
-function fmtMoney(n, cur = 'Rp') {
+function fmtMoney(n, cur = 'Rp', usdRate = 16000) {
   if (n === null || n === undefined || isNaN(n)) return cur === '$' ? '$0.00' : 'Rp0'
-  if (cur === '$') return '$' + (Math.round(n * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  if (cur === '$') return '$' + (Math.round((n / usdRate) * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
   return 'Rp' + Math.round(n).toLocaleString('id-ID')
 }
 
@@ -133,7 +133,10 @@ export default function Simulator() {
   const showMrc = scheme === 'mrc'
   const showUsd = currency === 'usd'
   const cur = currency === 'usd' ? '$' : 'Rp'
-  const unitLabel = s => `${s} (${cur})`
+  const rate = Number(usdRate) > 0 ? Number(usdRate) : 16000
+  // internal state selalu Rupiah; mode USD hanya mengubah tampilan input & hasil
+  const toDisp = rp => showUsd ? Math.round((Number(rp) / rate) * 100) / 100 : rp
+  const fromDisp = v => showUsd ? Number(v) * rate : v
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto">
@@ -209,7 +212,7 @@ export default function Simulator() {
                   className="input-field font-mono"
                 />
                 <p className="text-[11px] text-slate-400 mt-1">
-                  Semua hasil ditampilkan dalam USD dengan kurs ini (input tetap Rupiah).
+                  Input & semua hasil ditampilkan dalam USD dengan kurs ini (disimpan sebagai Rupiah).
                 </p>
               </div>
             )}
@@ -228,8 +231,8 @@ export default function Simulator() {
                 <Lock className="w-3 h-3 text-slate-400" />
               </label>
               <input
-                type="text"
-                value={cogs ? fmtMoney(cogs, cur) : '—'}
+                type="number"
+                value={cogs ? toDisp(cogs) : ''}
                 readOnly
                 className="input-field font-mono bg-slate-100 text-slate-500 cursor-not-allowed border-slate-200"
               />
@@ -244,7 +247,7 @@ export default function Simulator() {
                 <h3 className="text-xs font-bold text-brand-600 uppercase tracking-wider mb-3">OTC Input</h3>
                 <div>
                   <label className="input-label">OTC Price per Device ({cur})</label>
-                  <input type="number" min="0" value={otcPrice} onChange={e => setOtcPrice(e.target.value)} className="input-field font-mono" />
+                  <input type="number" min="0" step="any" value={toDisp(otcPrice)} onChange={e => setOtcPrice(fromDisp(e.target.value))} className="input-field font-mono" />
                 </div>
               </div>
             )}
@@ -269,8 +272,9 @@ export default function Simulator() {
                     <input
                       type="number"
                       min="0"
-                      value={setupFee || ''}
-                      onChange={e => setSetupFee(e.target.value === '' ? 0 : e.target.value)}
+                      step="any"
+                      value={setupFee ? toDisp(setupFee) : ''}
+                      onChange={e => setSetupFee(e.target.value === '' ? 0 : fromDisp(e.target.value))}
                       placeholder="0 (Tanpa DP di awal)"
                       className="input-field font-mono"
                     />
@@ -280,11 +284,11 @@ export default function Simulator() {
                   </div>
                   <div>
                     <label className="input-label">Daily Fee ({cur})</label>
-                    <input type="number" min="0" value={dailyFee} onChange={e => setDailyFee(e.target.value)} className="input-field font-mono" />
+                    <input type="number" min="0" step="any" value={toDisp(dailyFee)} onChange={e => setDailyFee(fromDisp(e.target.value))} className="input-field font-mono" />
                   </div>
                   <div>
                     <label className="input-label">Daily Incentive ({cur})</label>
-                    <input type="number" min="0" value={dailyIncentive} onChange={e => setDailyIncentive(e.target.value)} className="input-field font-mono" />
+                    <input type="number" min="0" step="any" value={toDisp(dailyIncentive)} onChange={e => setDailyIncentive(fromDisp(e.target.value))} className="input-field font-mono" />
                   </div>
                   <div>
                     <label className="input-label">Active Days/month</label>
@@ -345,24 +349,24 @@ export default function Simulator() {
               />
 
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <StatCard icon={DollarSign} label="Total Revenue" value={fmtMoney(result.totalRevenue, cur)} color="brand" />
-                <StatCard icon={Wallet} label="Total Cost" value={fmtMoney(result.totalCost, cur)} color="slate" />
+                <StatCard icon={DollarSign} label="Total Revenue" value={fmtMoney(result.totalRevenue, cur, rate)} color="brand" />
+                <StatCard icon={Wallet} label="Total Cost" value={fmtMoney(result.totalCost, cur, rate)} color="slate" />
                 <StatCard
                   icon={result.totalMargin >= 0 ? TrendingUp : TrendingDown}
                   label="Total Margin"
-                  value={fmtMoney(result.totalMargin, cur)}
+                  value={fmtMoney(result.totalMargin, cur, rate)}
                   color={result.totalMargin >= 0 ? 'emerald' : 'red'}
                 />
                 <StatCard
                   icon={Percent}
                   label="Margin per Device"
-                  value={fmtMoney(result.marginPerDevice, cur)}
+                  value={fmtMoney(result.marginPerDevice, cur, rate)}
                   color={result.marginPerDevice >= 0 ? 'emerald' : 'red'}
                 />
                 {showMrc && (
                   <>
-                    <StatCard icon={Zap} label="Gross MRC / month" value={fmtMoney(result.grossMRC, cur)} color="brand" sublabel="per active device" />
-                    <StatCard icon={TrendingUp} label="Net MRC / month" value={fmtMoney(result.netMRC, cur)} color="emerald" sublabel="per active device" />
+                    <StatCard icon={Zap} label="Gross MRC / month" value={fmtMoney(result.grossMRC, cur, rate)} color="brand" sublabel="per active device" />
+                    <StatCard icon={TrendingUp} label="Net MRC / month" value={fmtMoney(result.netMRC, cur, rate)} color="emerald" sublabel="per active device" />
                     <StatCard
                       icon={Users}
                       label="Avg Active Units"
@@ -374,7 +378,7 @@ export default function Simulator() {
                       <StatCard
                         icon={DollarSign}
                         label="Setup Fee (DP)"
-                        value={fmtMoney(result.setupFee, cur)}
+                        value={fmtMoney(result.setupFee, cur, rate)}
                         color="brand"
                         sublabel="Upfront per device"
                       />
