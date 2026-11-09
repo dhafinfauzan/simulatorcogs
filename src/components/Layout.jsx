@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
-import { Calculator, Cpu, LogOut, User as UserIcon, Menu, X } from 'lucide-react'
+import { Calculator, Cpu, LogOut, User as UserIcon, Menu, X, Settings } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
 
 export default function Layout() {
@@ -15,7 +15,8 @@ export default function Layout() {
 
   const navItems = [
     { to: '/simulator', label: 'Simulator', icon: Calculator },
-    { to: '/devices', label: 'Device Management', icon: Cpu }
+    { to: '/devices', label: 'Device Management', icon: Cpu },
+    { to: '/settings', label: 'Settings', icon: Settings }
   ]
 
   return (

@@ -3,6 +3,7 @@ import { useAuth } from './context/AuthContext.jsx'
 import Layout from './components/Layout.jsx'
 import Login from './pages/Login.jsx'
 import DeviceManagement from './pages/DeviceManagement.jsx'
+import Settings from './pages/Settings.jsx'
 import Simulator from './pages/Simulator.jsx'
 
 function ProtectedRoute({ children }) {
@@ -30,6 +31,7 @@ export default function App() {
       <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route path="/simulator" element={<Simulator />} />
         <Route path="/devices" element={<DeviceManagement />} />
+        <Route path="/settings" element={<Settings />} />
         <Route path="*" element={<Navigate to="/simulator" replace />} />
       </Route>
     </Routes>
