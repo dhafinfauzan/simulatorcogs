@@ -80,5 +80,9 @@ if (!cols.some(c => c.name === 'cogs_mrc')) {
 if (!cols.some(c => c.name === 'default_setup_fee')) {
   db.exec('ALTER TABLE devices ADD COLUMN default_setup_fee REAL NOT NULL DEFAULT 0')
 }
+// price_tiers: JSON array [{min_qty, price}] — harga grosir dalam USD
+if (!cols.some(c => c.name === 'price_tiers')) {
+  db.exec("ALTER TABLE devices ADD COLUMN price_tiers TEXT NOT NULL DEFAULT '[]'")
+}
 
 export default db

@@ -10,6 +10,11 @@ function fmtRp(n) {
   return 'Rp' + Math.round(n).toLocaleString('id-ID')
 }
 
+function fmtUsd(n) {
+  if (n === null || n === undefined || isNaN(n)) return '—'
+  return '$' + (Math.round(n * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
 export default function DeviceManagement() {
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin'
@@ -156,7 +161,7 @@ export default function DeviceManagement() {
                       {d.status}
                     </span>
                   </td>
-                  <td className="px-5 py-3.5 text-right text-sm text-slate-600 font-mono">{fmtRp(d.cogs)}</td>
+                  <td className="px-5 py-3.5 text-right text-sm text-slate-600 font-mono">{fmtUsd(d.cogs)}</td>
                   <td className="px-5 py-3.5 text-right text-sm text-slate-600 font-mono">{fmtRp(d.default_otc_price)}</td>
                   <td className="px-5 py-3.5 text-right text-sm text-slate-600 font-mono">{fmtRp(d.default_daily_fee)}</td>
                   {isAdmin && (
@@ -225,6 +230,9 @@ function DeviceModal({ device, onClose, onSaved }) {
     default_active_rate: device?.default_active_rate || 50,
     default_program_period: device?.default_program_period || 12
   })
+  const [tiers, setTiers] = useState(
+    Array.isArray(device?.price_tiers) ? device.price_tiers : []
+  )
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -232,15 +240,38 @@ function DeviceModal({ device, onClose, onSaved }) {
     setForm(prev => ({ ...prev, [field]: value }))
   }
 
+  function updateTier(i, field, value) {
+    setTiers(prev => prev.map((t, idx) => idx === i ? { ...t, [field]: value } : t))
+  }
+
+  function addTier() {
+    setTiers(prev => [...prev, { min_qty: '', price: '' }])
+  }
+
+  function removeTier(i) {
+    setTiers(prev => prev.filter((_, idx) => idx !== i))
+  }
+
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
+    // validasi tier
+    const cleanTiers = []
+    for (const t of tiers) {
+      const q = Number(t.min_qty), p = Number(t.price)
+      if (!t.min_qty || !t.price || isNaN(q) || isNaN(p) || q < 1 || p < 0) {
+        setError('Setiap tier butuh Min Qty (≥1) dan Price (≥0) yang valid.')
+        return
+      }
+      cleanTiers.push({ min_qty: q, price: p })
+    }
     setSaving(true)
     try {
+      const payload = { ...form, price_tiers: cleanTiers }
       if (isEdit) {
-        await api.updateDevice(device.id, form)
+        await api.updateDevice(device.id, payload)
       } else {
-        await api.createDevice(form)
+        await api.createDevice(payload)
       }
       onSaved()
     } catch (err) {
@@ -284,14 +315,54 @@ function DeviceModal({ device, onClose, onSaved }) {
                 </select>
               </div>
               <div>
-                <label className="input-label">COGS — Cash/OTC (Rp)</label>
-                <input type="number" min="0" value={form.cogs} onChange={e => update('cogs', Number(e.target.value))} className="input-field" required />
+                <label className="input-label">COGS — Cash/OTC (USD)</label>
+                <input type="number" min="0" step="any" value={form.cogs} onChange={e => update('cogs', e.target.value === '' ? 0 : Number(e.target.value))} className="input-field" required />
               </div>
               <div>
-                <label className="input-label">COGS — Credit/MRC (Rp)</label>
-                <input type="number" min="0" value={form.cogs_mrc ?? form.cogs} onChange={e => update('cogs_mrc', Number(e.target.value))} className="input-field" required />
+                <label className="input-label">COGS — Credit/MRC (USD)</label>
+                <input type="number" min="0" step="any" value={form.cogs_mrc ?? form.cogs} onChange={e => update('cogs_mrc', e.target.value === '' ? 0 : Number(e.target.value))} className="input-field" required />
               </div>
             </div>
+          </section>
+
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Volume Price Tiers (USD)</h3>
+              <button type="button" onClick={addTier} className="btn-ghost !px-2 !py-1 text-xs font-semibold text-brand-600 flex items-center gap-1">
+                <Plus className="w-3.5 h-3.5" /> Add Tier
+              </button>
+            </div>
+            {tiers.length === 0 ? (
+              <p className="text-xs text-slate-400">Belum ada tier — COGS dasar dipakai untuk semua jumlah pembelian.</p>
+            ) : (
+              <div className="space-y-2">
+                {tiers.map((t, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="text-xs text-slate-500 whitespace-nowrap">Beli ≥</span>
+                    <input
+                      type="number" min="1" value={t.min_qty}
+                      onChange={e => updateTier(i, 'min_qty', e.target.value)}
+                      className="input-field !py-1.5 w-24" placeholder="24"
+                    />
+                    <span className="text-xs text-slate-500 whitespace-nowrap">pcs →</span>
+                    <div className="relative w-32">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">$</span>
+                      <input
+                        type="number" min="0" step="any" value={t.price}
+                        onChange={e => updateTier(i, 'price', e.target.value)}
+                        className="input-field !py-1.5 pl-7 font-mono" placeholder="120"
+                      />
+                    </div>
+                    <button type="button" onClick={() => removeTier(i)} className="btn-ghost !px-2 !py-1.5" title="Remove tier">
+                      <Trash2 className="w-4 h-4 text-red-400" />
+                    </button>
+                  </div>
+                ))}
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Tier dgn Min Qty terbesar yang tercapai otomatis dipakai di Simulator.
+                </p>
+              </div>
+            )}
           </section>
 
           <section>

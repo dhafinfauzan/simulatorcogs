@@ -36,7 +36,6 @@ export default function Simulator() {
   const [setupFee, setSetupFee] = useState(0)
   const [activeDays, setActiveDays] = useState(22)
   const [activeRate, setActiveRate] = useState(50)
-  const [currency, setCurrency] = useState('idr')
   const [usdRate, setUsdRate] = useState(16000)
 
   const [result, setResult] = useState(null)
@@ -52,24 +51,22 @@ export default function Simulator() {
     }).catch(() => {})
   }, [])
 
-  // simpan kurs ke settings (debounce 800ms setelah user ubah)
-  const rateTimer = useRef(null)
-  useEffect(() => {
-    if (!Number(usdRate) || Number(usdRate) <= 0) return
-    clearTimeout(rateTimer.current)
-    rateTimer.current = setTimeout(() => {
-      api.updateSettings({ usd_rate: String(usdRate) }).catch(() => {})
-    }, 800)
-    return () => clearTimeout(rateTimer.current)
-  }, [usdRate])
-
   const selectedDevice = devices.find(d => String(d.id) === String(selectedDeviceId))
 
-  // COGS follows scheme: OTC → cash COGS, MRC → credit COGS
+  // pilih COGS sesuai tier: tier dgn min_qty terbesar yang <= totalUnit
+  function resolveCogs(d, units, isMrc) {
+    const base = isMrc ? d.cogs_mrc : d.cogs
+    const tiers = Array.isArray(d.price_tiers) ? d.price_tiers : []
+    const match = tiers.filter(t => Number(t.min_qty) > 0 && Number(units) >= Number(t.min_qty))
+      .sort((a, b) => Number(b.min_qty) - Number(a.min_qty))[0]
+    return match ? Number(match.price) : Number(base)
+  }
+
+  // COGS follows scheme: OTC → cash COGS, MRC → credit COGS (USD master → IDR via kurs)
   useEffect(() => {
     if (!selectedDevice) return
-    setCogs(scheme === 'mrc' ? selectedDevice.cogs_mrc : selectedDevice.cogs)
-  }, [scheme, selectedDeviceId, devices])
+    setCogs(Math.round(resolveCogs(selectedDevice, totalUnit, scheme === 'mrc') * usdRate))
+  }, [scheme, selectedDeviceId, devices, usdRate, totalUnit])
 
   function selectDevice(id) {
     setSelectedDeviceId(id)
@@ -79,7 +76,7 @@ export default function Simulator() {
       setSetupFee(0)
       return
     }
-    setCogs(scheme === 'mrc' ? d.cogs_mrc : d.cogs)
+    setCogs(Math.round(resolveCogs(d, totalUnit, scheme === 'mrc') * usdRate))
     setOtcPrice(d.default_otc_price)
     setDailyFee(d.default_daily_fee)
     setDailyIncentive(d.default_daily_incentive)
@@ -119,9 +116,7 @@ export default function Simulator() {
         dailyIncentive: Number(dailyIncentive),
         setupFee: Number(setupFee || 0),
         activeDays: Number(activeDays),
-        activeRate: Number(activeRate),
-        currency,
-        usdRate: Number(usdRate)
+        activeRate: Number(activeRate)
       })
       setResult(res)
       setHasCalculated(true)
@@ -134,7 +129,7 @@ export default function Simulator() {
     } finally {
       setLoading(false)
     }
-  }, [scheme, totalUnit, programPeriod, cogs, otcPrice, dailyFee, dailyIncentive, setupFee, activeDays, activeRate, currency, usdRate])
+  }, [scheme, totalUnit, programPeriod, cogs, otcPrice, dailyFee, dailyIncentive, setupFee, activeDays, activeRate])
 
   const calcTimer = useRef(null)
   useEffect(() => {
@@ -142,16 +137,10 @@ export default function Simulator() {
     clearTimeout(calcTimer.current)
     calcTimer.current = setTimeout(() => calculate(), 400)
     return () => clearTimeout(calcTimer.current)
-  }, [scheme, totalUnit, programPeriod, cogs, otcPrice, dailyFee, dailyIncentive, setupFee, activeDays, activeRate, currency, usdRate, hasCalculated, calculate])
+  }, [scheme, totalUnit, programPeriod, cogs, otcPrice, dailyFee, dailyIncentive, setupFee, activeDays, activeRate, hasCalculated, calculate])
 
   const showOtc = scheme === 'otc'
   const showMrc = scheme === 'mrc'
-  const showUsd = currency === 'usd'
-  const cur = currency === 'usd' ? '$' : 'Rp'
-  const rate = Number(usdRate) > 0 ? Number(usdRate) : 16000
-  // internal state selalu Rupiah; mode USD hanya mengubah tampilan input & hasil
-  const toDisp = rp => showUsd ? Math.round((Number(rp) / rate) * 100) / 100 : rp
-  const fromDisp = v => showUsd ? Number(v) * rate : v
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto">
@@ -201,37 +190,6 @@ export default function Simulator() {
               </div>
             </div>
 
-            <div className="mb-5">
-              <label className="input-label">Currency</label>
-              <div className="flex gap-1.5 bg-slate-100 p-1 rounded-xl">
-                {[{ value: 'idr', label: 'IDR (Rp)' }, { value: 'usd', label: 'USD ($)' }].map(c => (
-                  <button
-                    key={c.value}
-                    onClick={() => setCurrency(c.value)}
-                    className={`segment-btn ${currency === c.value ? 'segment-btn-active' : ''}`}
-                  >
-                    {c.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {showUsd && (
-              <div className="mb-5">
-                <label className="input-label">USD Rate (1 USD = ? Rp)</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={usdRate}
-                  onChange={e => setUsdRate(e.target.value)}
-                  className="input-field font-mono"
-                />
-                <p className="text-[11px] text-slate-400 mt-1">
-                  Input & semua hasil ditampilkan dalam USD dengan kurs ini (disimpan sebagai Rupiah).
-                </p>
-              </div>
-            )}
-
             <div className="grid grid-cols-2 gap-4 mb-5">
               <div>
                 <label className="input-label">Total Unit</label>
@@ -239,20 +197,23 @@ export default function Simulator() {
               </div>
             </div>
 
-            {/* COGS — locked, scheme-dependent */}
+            {/* COGS — locked, scheme-dependent, tier-aware */}
             <div className="mb-5">
               <label className="input-label flex items-center gap-1.5">
                 COGS per Unit {scheme === 'mrc' ? '(Credit Scheme)' : '(Cash Scheme)'}
                 <Lock className="w-3 h-3 text-slate-400" />
               </label>
               <input
-                type="number"
-                value={cogs ? toDisp(cogs) : ''}
+                type="text"
+                value={cogs ? fmtMoney(cogs) : '—'}
                 readOnly
                 className="input-field font-mono bg-slate-100 text-slate-500 cursor-not-allowed border-slate-200"
               />
               <p className="text-[11px] text-slate-400 mt-1">
-                Locked from Device Master — {scheme === 'mrc' ? 'credit scheme COGS (incl. data package & marketing)' : 'cash scheme COGS'}
+                Modal beli (USD master × kurs Rp{Number(usdRate).toLocaleString('id-ID')})
+                {selectedDevice && Array.isArray(selectedDevice.price_tiers) && selectedDevice.price_tiers.length > 0 && (
+                  <> — tier aktif: beli ≥ {selectedDevice.price_tiers.map(t => `${t.min_qty} → $${t.price}`).join(', ')}</>
+                )}
               </p>
             </div>
 
@@ -261,8 +222,8 @@ export default function Simulator() {
               <div className="mb-5 pb-5 border-b border-slate-100">
                 <h3 className="text-xs font-bold text-brand-600 uppercase tracking-wider mb-3">OTC Input</h3>
                 <div>
-                  <label className="input-label">OTC Price per Device ({cur})</label>
-                  <input type="number" min="0" step="any" value={toDisp(otcPrice)} onChange={e => setOtcPrice(fromDisp(e.target.value))} className="input-field font-mono" />
+                  <label className="input-label">OTC Price per Device (Rp)</label>
+                  <input type="number" min="0" value={otcPrice} onChange={e => setOtcPrice(e.target.value)} className="input-field font-mono" />
                 </div>
               </div>
             )}
@@ -281,15 +242,15 @@ export default function Simulator() {
                   </div>
                   <div className="col-span-2">
                     <label className="input-label flex items-center justify-between">
-                      <span>Setup Fee / DP per Unit ({cur})</span>
+                      <span>Setup Fee / DP per Unit (Rp)</span>
                       <span className="text-[11px] font-medium text-brand-600 bg-brand-50 border border-brand-200 px-2 py-0.5 rounded-full">Opsional</span>
                     </label>
                     <input
                       type="number"
                       min="0"
                       step="any"
-                      value={setupFee ? toDisp(setupFee) : ''}
-                      onChange={e => setSetupFee(e.target.value === '' ? 0 : fromDisp(e.target.value))}
+                      value={setupFee || ''}
+                      onChange={e => setSetupFee(e.target.value === '' ? 0 : e.target.value)}
                       placeholder="0 (Tanpa DP di awal)"
                       className="input-field font-mono"
                     />
@@ -298,12 +259,12 @@ export default function Simulator() {
                     </p>
                   </div>
                   <div>
-                    <label className="input-label">Daily Fee ({cur})</label>
-                    <input type="number" min="0" step="any" value={toDisp(dailyFee)} onChange={e => setDailyFee(fromDisp(e.target.value))} className="input-field font-mono" />
+                    <label className="input-label">Daily Fee (Rp)</label>
+                    <input type="number" min="0" step="any" value={dailyFee} onChange={e => setDailyFee(e.target.value)} className="input-field font-mono" />
                   </div>
                   <div>
-                    <label className="input-label">Daily Incentive ({cur})</label>
-                    <input type="number" min="0" step="any" value={toDisp(dailyIncentive)} onChange={e => setDailyIncentive(fromDisp(e.target.value))} className="input-field font-mono" />
+                    <label className="input-label">Daily Incentive (Rp)</label>
+                    <input type="number" min="0" step="any" value={dailyIncentive} onChange={e => setDailyIncentive(e.target.value)} className="input-field font-mono" />
                   </div>
                   <div>
                     <label className="input-label">Active Days/month</label>
@@ -364,24 +325,24 @@ export default function Simulator() {
               />
 
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <StatCard icon={DollarSign} label="Total Revenue" value={fmtMoney(result.totalRevenue, cur, rate)} color="brand" />
-                <StatCard icon={Wallet} label="Total Cost" value={fmtMoney(result.totalCost, cur, rate)} color="slate" />
+                <StatCard icon={DollarSign} label="Total Revenue" value={fmtMoney(result.totalRevenue)} color="brand" />
+                <StatCard icon={Wallet} label="Total Cost" value={fmtMoney(result.totalCost)} color="slate" />
                 <StatCard
                   icon={result.totalMargin >= 0 ? TrendingUp : TrendingDown}
                   label="Total Margin"
-                  value={fmtMoney(result.totalMargin, cur, rate)}
+                  value={fmtMoney(result.totalMargin)}
                   color={result.totalMargin >= 0 ? 'emerald' : 'red'}
                 />
                 <StatCard
                   icon={Percent}
                   label="Margin per Device"
-                  value={fmtMoney(result.marginPerDevice, cur, rate)}
+                  value={fmtMoney(result.marginPerDevice)}
                   color={result.marginPerDevice >= 0 ? 'emerald' : 'red'}
                 />
                 {showMrc && (
                   <>
-                    <StatCard icon={Zap} label="Gross MRC / month" value={fmtMoney(result.grossMRC, cur, rate)} color="brand" sublabel="per active device" />
-                    <StatCard icon={TrendingUp} label="Net MRC / month" value={fmtMoney(result.netMRC, cur, rate)} color="emerald" sublabel="per active device" />
+                    <StatCard icon={Zap} label="Gross MRC / month" value={fmtMoney(result.grossMRC)} color="brand" sublabel="per active device" />
+                    <StatCard icon={TrendingUp} label="Net MRC / month" value={fmtMoney(result.netMRC)} color="emerald" sublabel="per active device" />
                     <StatCard
                       icon={Users}
                       label="Avg Active Units"
@@ -393,7 +354,7 @@ export default function Simulator() {
                       <StatCard
                         icon={DollarSign}
                         label="Setup Fee (DP)"
-                        value={fmtMoney(result.setupFee, cur, rate)}
+                        value={fmtMoney(result.setupFee)}
                         color="brand"
                         sublabel="Upfront per device"
                       />
