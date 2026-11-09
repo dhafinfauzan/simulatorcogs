@@ -3,7 +3,7 @@ import { calculate as clientCalculate, validateInput as clientValidateInput } fr
 const API_BASE = '/api'
 const tokenKey = 'appmodel_token'
 const userKey = 'appmodel_user'
-const devicesKey = 'appmodel_devices_v2'
+const devicesKey = 'appmodel_devices_v3' // v3: COGS in USD (v2 was IDR)
 const settingsKey = 'appmodel_settings_v1'
 
 export function getToken() {
