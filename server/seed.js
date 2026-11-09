@@ -26,6 +26,6 @@ insertDevice.run('P5K', 'EDC P5K 8GB', 'Active', 1268438, 1628438, 1, 1750000, 1
 insertDevice.run('P5SE', 'EDC P5SE', 'Active', 1631438, 2051438, 1, 2250000, 1, 11000, 3700, 0, 22, 50, 12)
 insertDevice.run('Q3 MINI', 'EDC Q3 Mini', 'Active', 959888, 1259888, 1, 1499000, 1, 6800, 2300, 0, 22, 50, 12)
 insertDevice.run('Q3', 'EDC Q3', 'Active', 1685888, 2082675, 1, 2399000, 1, 11000, 3700, 0, 22, 50, 12)
-insertDevice.run('Q2', 'EDC Q2', 'Active', 80000, 2746688, 1, 2850000, 1, 13600, 4500, 0, 22, 50, 12)
+insertDevice.run('Q2', 'EDC Q2', 'Active', 1920000, 2746688, 1, 2850000, 1, 13600, 4500, 0, 22, 50, 12)
 
 console.log('Seed complete! 10 devices with dual COGS (OTC/MRC).')
