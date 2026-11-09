@@ -1,6 +1,6 @@
 // Seed script — run with: npm run seed
-// COGS (modal beli) disimpan dalam USD. Field lain (harga jual, fee) tetap IDR.
-// Konversi COGS USD→IDR terjadi di client via kurs settings (usd_rate).
+// COGS (modal beli/HPP) disimpan dalam USD — sumber: "Product Cost Structure 5Jan2026.xlsx" sheet Device, baris HPP (in USD).
+// Field lain (harga jual, fee) tetap IDR. Konversi COGS USD→IDR di client via kurs settings (usd_rate).
 import db from './db.js'
 
 const seedUsers = db.prepare('INSERT OR IGNORE INTO users (username, password, role) VALUES (?, ?, ?)')
@@ -19,19 +19,18 @@ const insertDevice = db.prepare(`
   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `)
 
-// cogs & cogs_mrc dalam USD (legacy IDR ÷ 16000). Sisanya IDR apa adanya.
-// Q2 cogs = $120/pc (berlaku min. beli 24 pcs → lihat price_tiers).
-const U = 16000
-insertDevice.run('5M', 'Device 5M', 'Active', 200000/U, 200000/U, 1, 225000, 1, 1500, 500, 0, 22, 50, 12, '[]')
-insertDevice.run('QS6', 'Soundbox QS6', 'Active', 323441/U, 383441/U, 1, 375000, 1, 2000, 700, 0, 22, 50, 12, '[]')
-insertDevice.run('QS5M', 'Soundbox QS5M', 'Active', 319200/U, 379200/U, 1, 350000, 1, 1800, 600, 0, 22, 50, 12, '[]')
-insertDevice.run('QS2', 'Soundbox QS2', 'Active', 318203/U, 493203/U, 1, 475000, 1, 2700, 900, 0, 22, 50, 12, '[]')
-insertDevice.run('QS3D', 'Soundbox QS3D', 'Active', 446250/U, 566250/U, 1, 599000, 1, 3000, 1000, 0, 22, 50, 12, '[]')
-insertDevice.run('P5K', 'EDC P5K 8GB', 'Active', 1268438/U, 1628438/U, 1, 1750000, 1, 8000, 2700, 0, 22, 50, 12, '[]')
-insertDevice.run('P5SE', 'EDC P5SE', 'Active', 1631438/U, 2051438/U, 1, 2250000, 1, 11000, 3700, 0, 22, 50, 12, '[]')
-insertDevice.run('Q3 MINI', 'EDC Q3 Mini', 'Active', 959888/U, 1259888/U, 1, 1499000, 1, 6800, 2300, 0, 22, 50, 12, '[]')
-insertDevice.run('Q3', 'EDC Q3', 'Active', 1685888/U, 2082675/U, 1, 2399000, 1, 11000, 3700, 0, 22, 50, 12, '[]')
-insertDevice.run('Q2', 'EDC Q2', 'Active', 120, 2746688/U, 1, 2850000, 1, 13600, 4500, 0, 22, 50, 12,
+// cogs = HPP (in USD) dari Excel. 5M tidak ada di Excel (legacy). Q2: $120, tier min 24 pcs.
+// cogs_mrc: di Excel COGS credit memakai HPP USD yang sama + komponen tambahan (data package, sales incentive) — dihitung IDR, dikonversi balik ke USD @16500 (kurs Excel).
+insertDevice.run('5M', 'Device 5M', 'Active', 12.5, 12.5, 1, 225000, 1, 1500, 500, 0, 22, 50, 12, '[]')
+insertDevice.run('QS6', 'Soundbox QS6', 'Active', 14.4, 383441.25/16500, 1, 375000, 1, 2000, 700, 0, 22, 50, 12, '[]')
+insertDevice.run('QS5M', 'Soundbox QS5M', 'Active', 11.5, 379200/16500, 1, 350000, 1, 1800, 600, 0, 22, 50, 12, '[]')
+insertDevice.run('QS2', 'Soundbox QS2', 'Active', 14.6, 493202.5/16500, 1, 475000, 1, 2700, 900, 0, 22, 50, 12, '[]')
+insertDevice.run('QS3D', 'Soundbox QS3D', 'Active', 18.5, 566250/16500, 1, 599000, 1, 3000, 1000, 0, 22, 50, 12, '[]')
+insertDevice.run('P5K', 'EDC P5K 8GB', 'Active', 65, 1628437.5/16500, 1, 1750000, 1, 8000, 2700, 0, 22, 50, 12, '[]')
+insertDevice.run('P5SE', 'EDC P5SE', 'Active', 85, 2051437.5/16500, 1, 2250000, 1, 11000, 3700, 0, 22, 50, 12, '[]')
+insertDevice.run('Q3 MINI', 'EDC Q3 Mini', 'Active', 48, 1259887.5/16500, 1, 1499000, 1, 6800, 2300, 0, 22, 50, 12, '[]')
+insertDevice.run('Q3', 'EDC Q3', 'Active', 88, 2082675/16500, 1, 2399000, 1, 11000, 3700, 0, 22, 50, 12, '[]')
+insertDevice.run('Q2', 'EDC Q2', 'Active', 120, 120, 1, 2850000, 1, 13600, 4500, 0, 22, 50, 12,
   JSON.stringify([{ min_qty: 24, price: 120 }]))
 
-console.log('Seed complete! 10 devices (COGS in USD, rest IDR).')
+console.log('Seed complete! 10 devices (COGS/HPP in USD).')
