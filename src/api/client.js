@@ -51,7 +51,7 @@ function getLocalSettings() {
   if (saved) {
     try { return JSON.parse(saved) } catch {}
   }
-  const def = { bep_threshold_months: '10' }
+  const def = { bep_threshold_months: '10', usd_rate: '16000' }
   localStorage.setItem(settingsKey, JSON.stringify(def))
   return def
 }

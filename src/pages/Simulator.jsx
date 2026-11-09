@@ -46,7 +46,22 @@ export default function Simulator() {
 
   useEffect(() => {
     api.getDevices({ status: 'active' }).then(setDevices).catch(() => {})
+    api.getSettings().then(s => {
+      const r = Number(s.usd_rate)
+      if (r > 0) setUsdRate(r)
+    }).catch(() => {})
   }, [])
+
+  // simpan kurs ke settings (debounce 800ms setelah user ubah)
+  const rateTimer = useRef(null)
+  useEffect(() => {
+    if (!Number(usdRate) || Number(usdRate) <= 0) return
+    clearTimeout(rateTimer.current)
+    rateTimer.current = setTimeout(() => {
+      api.updateSettings({ usd_rate: String(usdRate) }).catch(() => {})
+    }, 800)
+    return () => clearTimeout(rateTimer.current)
+  }, [usdRate])
 
   const selectedDevice = devices.find(d => String(d.id) === String(selectedDeviceId))
 

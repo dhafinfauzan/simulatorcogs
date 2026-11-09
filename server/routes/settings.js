@@ -16,10 +16,14 @@ router.get('/', (req, res) => {
 
 // PUT /api/settings — admin only
 router.put('/', requireAdmin, (req, res) => {
-  const { bep_threshold_months } = req.body
+  const { bep_threshold_months, usd_rate } = req.body
   if (bep_threshold_months !== undefined) {
     db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value')
       .run('bep_threshold_months', String(bep_threshold_months))
+  }
+  if (usd_rate !== undefined) {
+    db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value')
+      .run('usd_rate', String(usd_rate))
   }
   res.json({ message: 'Settings updated.' })
 })
