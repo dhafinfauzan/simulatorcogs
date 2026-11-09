@@ -1,17 +1,13 @@
-import { useState, useEffect, useRef } from 'react'
-import { Settings as SettingsIcon, DollarSign, Check, AlertCircle } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Settings as SettingsIcon, DollarSign, Check, AlertCircle, Save } from 'lucide-react'
 import { api } from '../api/client.js'
-import { useAuth } from '../context/AuthContext.jsx'
 
 export default function Settings() {
-  const { user } = useAuth()
-  const isAdmin = user?.role === 'admin'
-
   const [usdRate, setUsdRate] = useState('')
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
-  const saveTimer = useRef(null)
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     api.getSettings().then(s => {
@@ -23,25 +19,24 @@ export default function Settings() {
     })
   }, [])
 
-  function handleChange(v) {
-    setUsdRate(v)
-    setSaved(false)
+  async function handleSave() {
     setError('')
-    clearTimeout(saveTimer.current)
-    saveTimer.current = setTimeout(async () => {
-      const n = Number(v)
-      if (!v || isNaN(n) || n <= 0) {
-        setError('Kurs harus angka lebih dari 0.')
-        return
-      }
-      try {
-        await api.updateSettings({ usd_rate: String(n) })
-        setSaved(true)
-        setTimeout(() => setSaved(false), 2500)
-      } catch (err) {
-        setError(err.message || 'Gagal menyimpan. Pastikan login sebagai admin.')
-      }
-    }, 800)
+    setSaved(false)
+    const n = Number(usdRate)
+    if (!usdRate || isNaN(n) || n <= 0) {
+      setError('Kurs harus angka lebih dari 0.')
+      return
+    }
+    setSaving(true)
+    try {
+      await api.updateSettings({ usd_rate: String(n) })
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+    } catch (err) {
+      setError(err.message || 'Gagal menyimpan.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -70,28 +65,39 @@ export default function Settings() {
               step="any"
               disabled={loading}
               value={usdRate}
-              onChange={e => handleChange(e.target.value)}
+              onChange={e => { setUsdRate(e.target.value); setSaved(false); setError('') }}
               className="input-field font-mono pl-10"
               placeholder="16000"
             />
           </div>
           <p className="text-[11px] text-slate-400 mt-1.5">
-            Kurs ini dipakai Simulator saat menampilkan nilai dalam USD. Tersimpan otomatis (debounce 800ms).
+            Kurs ini dipakai Simulator saat menampilkan nilai dalam USD. Klik Save untuk menyimpan.
           </p>
+        </div>
 
+        <div className="flex items-center gap-3 mt-5">
+          <button
+            onClick={handleSave}
+            disabled={saving || loading}
+            className="btn-primary gap-2"
+          >
+            <Save className="w-4 h-4" />
+            {saving ? 'Saving…' : 'Save'}
+          </button>
           {saved && (
-            <div className="flex items-center gap-2 mt-3 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-lg">
-              <Check className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
-              <span className="text-xs text-emerald-700 font-medium">Tersimpan.</span>
-            </div>
-          )}
-          {error && (
-            <div className="flex items-center gap-2 mt-3 px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
-              <AlertCircle className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
-              <span className="text-xs text-red-700">{error}</span>
-            </div>
+            <span className="flex items-center gap-1.5 text-sm text-emerald-600 font-medium">
+              <Check className="w-4 h-4" />
+              Tersimpan!
+            </span>
           )}
         </div>
+
+        {error && (
+          <div className="flex items-center gap-2 mt-4 px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
+            <AlertCircle className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
+            <span className="text-xs text-red-700">{error}</span>
+          </div>
+        )}
       </div>
     </div>
   )
