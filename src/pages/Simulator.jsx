@@ -36,7 +36,7 @@ export default function Simulator() {
   const [setupFee, setSetupFee] = useState(0)
   const [activeDays, setActiveDays] = useState(22)
   const [activeRate, setActiveRate] = useState(50)
-  const [usdRate, setUsdRate] = useState(16000)
+  const [usdRate, setUsdRate] = useState(18500)
 
   const [result, setResult] = useState(null)
   const [errors, setErrors] = useState([])

@@ -11,7 +11,7 @@ export default function Settings() {
 
   useEffect(() => {
     api.getSettings().then(s => {
-      setUsdRate(s.usd_rate || '16000')
+      setUsdRate(s.usd_rate || '18500')
       setLoading(false)
     }).catch(() => {
       setError('Gagal memuat settings.')

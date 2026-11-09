@@ -71,6 +71,7 @@ const upsertSetting = db.prepare(`
   ON CONFLICT(key) DO NOTHING
 `)
 upsertSetting.run('bep_threshold_months', '10')
+upsertSetting.run('usd_rate', '18500')
 
 // --- Migrations: add columns if missing ---
 const cols = db.prepare("PRAGMA table_info(devices)").all()

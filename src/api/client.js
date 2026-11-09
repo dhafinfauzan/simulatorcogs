@@ -21,7 +21,7 @@ export function clearToken() {
 
 // Initial 10 devices fallback for standalone/Vercel static deployment
 // COGS dalam USD (modal beli), field lain IDR. Konversi COGS ke IDR saat dipakai via usd_rate.
-const U = 16000
+const U = 18500
 const DEFAULT_DEVICES = [
   { id: 1, device_id: '5M', device_name: 'Device 5M', status: 'Active', cogs: 200000/U, cogs_mrc: 200000/U, otc_enabled: 1, default_otc_price: 225000, mrc_enabled: 1, default_daily_fee: 1500, default_daily_incentive: 500, default_setup_fee: 0, default_active_days: 22, default_active_rate: 50, default_program_period: 12, price_tiers: [] },
   { id: 2, device_id: 'QS6', device_name: 'Soundbox QS6', status: 'Active', cogs: 323441/U, cogs_mrc: 383441/U, otc_enabled: 1, default_otc_price: 375000, mrc_enabled: 1, default_daily_fee: 2000, default_daily_incentive: 700, default_setup_fee: 0, default_active_days: 22, default_active_rate: 50, default_program_period: 12, price_tiers: [] },
@@ -53,7 +53,7 @@ function getLocalSettings() {
   if (saved) {
     try { return JSON.parse(saved) } catch {}
   }
-  const def = { bep_threshold_months: '10', usd_rate: '16000' }
+  const def = { bep_threshold_months: '10', usd_rate: '18500' }
   localStorage.setItem(settingsKey, JSON.stringify(def))
   return def
 }
