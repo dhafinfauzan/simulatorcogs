@@ -12,9 +12,9 @@ function fmtNum(n) {
   return Math.round(n * 100) / 100
 }
 
-function fmtMoney(n, cur = 'Rp') {
+function fmtMoney(n, cur = 'Rp', usdRate = 16000) {
   if (n === null || n === undefined || isNaN(n)) return cur === '$' ? '$0.00' : 'Rp0'
-  if (cur === '$') return '$' + (Math.round(n * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  if (cur === '$') return '$' + (Math.round((n / usdRate) * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
   return 'Rp' + Math.round(n).toLocaleString('id-ID')
 }
 
@@ -32,6 +32,7 @@ export function calculate(input, bepThreshold = 10) {
   } = input
 
   const cur = input.currency === 'usd' ? '$' : 'Rp'
+  const usdRate = Number(input.usdRate) > 0 ? Number(input.usdRate) : 16000
   const numSetupFee = Number(setupFee) || 0
   const activeRatePct = activeRate / 100
   const grossMRC = dailyFee * activeDays
@@ -84,10 +85,10 @@ export function calculate(input, bepThreshold = 10) {
       marginPct: fmtNum(marginPct !== null ? marginPct * 100 : null),
       bepMonths, bepLabel, feasibility, feasibilityReason,
       breakdown: [
-        `Total OTC Revenue = OTC Price (${fmtMoney(otcPrice, cur)}) × Total Unit (${totalUnit}) = ${fmtMoney(totalOTCRevenue, cur)}`,
-        `Total Cost = COGS (${fmtMoney(cogs, cur)}) × Total Unit (${totalUnit}) = ${fmtMoney(totalCost, cur)}`,
-        `Margin per Device = OTC Price - COGS = ${fmtMoney(marginPerDevice, cur)}`,
-        `Total Margin = ${fmtMoney(totalMargin, cur)}`,
+        `Total OTC Revenue = OTC Price (${fmtMoney(otcPrice, cur, usdRate)}) × Total Unit (${totalUnit}) = ${fmtMoney(totalOTCRevenue, cur, usdRate)}`,
+        `Total Cost = COGS (${fmtMoney(cogs, cur, usdRate)}) × Total Unit (${totalUnit}) = ${fmtMoney(totalCost, cur, usdRate)}`,
+        `Margin per Device = OTC Price - COGS = ${fmtMoney(marginPerDevice, cur, usdRate)}`,
+        `Total Margin = ${fmtMoney(totalMargin, cur, usdRate)}`,
         `BEP: ${bepLabel}`
       ]
     })
@@ -133,23 +134,23 @@ export function calculate(input, bepThreshold = 10) {
     }
 
     const breakdownSteps = [
-      `Gross MRC/active device/month = Daily Fee (${fmtMoney(dailyFee, cur)}) × Active Days (${activeDays}) = ${fmtMoney(grossMRC, cur)}`,
-      `Sales Incentive/active device/month = Daily Incentive (${fmtMoney(dailyIncentive, cur)}) × Active Days (${activeDays}) = ${fmtMoney(salesIncentivePerMonth, cur)}`,
-      `Net MRC/active device/month = Gross MRC - Incentive = ${fmtMoney(netMRC, cur)}`,
-      `Expected Net MRC/deployed device/month = Net MRC × Active Rate (${activeRate}%) = ${fmtMoney(expectedNetMRC, cur)}`
+      `Gross MRC/active device/month = Daily Fee (${fmtMoney(dailyFee, cur, usdRate)}) × Active Days (${activeDays}) = ${fmtMoney(grossMRC, cur, usdRate)}`,
+      `Sales Incentive/active device/month = Daily Incentive (${fmtMoney(dailyIncentive, cur, usdRate)}) × Active Days (${activeDays}) = ${fmtMoney(salesIncentivePerMonth, cur, usdRate)}`,
+      `Net MRC/active device/month = Gross MRC - Incentive = ${fmtMoney(netMRC, cur, usdRate)}`,
+      `Expected Net MRC/deployed device/month = Net MRC × Active Rate (${activeRate}%) = ${fmtMoney(expectedNetMRC, cur, usdRate)}`
     ]
 
     if (numSetupFee > 0) {
-      breakdownSteps.push(`Setup Fee (DP) per Device = ${fmtMoney(numSetupFee, cur)}`)
-      breakdownSteps.push(`Sisa COGS yang perlu ditutup = COGS (${fmtMoney(cogs, cur)}) - Setup Fee (${fmtMoney(numSetupFee, cur)}) = ${fmtMoney(remainingCogs, cur)}`)
-      breakdownSteps.push(`BEP = Sisa COGS (${fmtMoney(remainingCogs, cur)}) ÷ Expected Net MRC (${fmtMoney(expectedNetMRC, cur)}) = ${bepMonths !== null ? fmtBEP(bepMonths) + ' months' : 'Not Reached'}`)
-      breakdownSteps.push(`Margin per Device = Setup Fee (${fmtMoney(numSetupFee, cur)}) + (Expected Net MRC × ${programPeriod} months) - COGS (${fmtMoney(cogs, cur)}) = ${fmtMoney(marginPerDevice, cur)}`)
+      breakdownSteps.push(`Setup Fee (DP) per Device = ${fmtMoney(numSetupFee, cur, usdRate)}`)
+      breakdownSteps.push(`Sisa COGS yang perlu ditutup = COGS (${fmtMoney(cogs, cur, usdRate)}) - Setup Fee (${fmtMoney(numSetupFee, cur, usdRate)}) = ${fmtMoney(remainingCogs, cur, usdRate)}`)
+      breakdownSteps.push(`BEP = Sisa COGS (${fmtMoney(remainingCogs, cur, usdRate)}) ÷ Expected Net MRC (${fmtMoney(expectedNetMRC, cur, usdRate)}) = ${bepMonths !== null ? fmtBEP(bepMonths) + ' months' : 'Not Reached'}`)
+      breakdownSteps.push(`Margin per Device = Setup Fee (${fmtMoney(numSetupFee, cur, usdRate)}) + (Expected Net MRC × ${programPeriod} months) - COGS (${fmtMoney(cogs, cur, usdRate)}) = ${fmtMoney(marginPerDevice, cur, usdRate)}`)
     } else {
-      breakdownSteps.push(`BEP = COGS (${fmtMoney(cogs, cur)}) ÷ Expected Net MRC (${fmtMoney(expectedNetMRC, cur)}) = ${bepMonths !== null ? fmtBEP(bepMonths) + ' months' : 'Not Reached'}`)
-      breakdownSteps.push(`Margin per Device = (Expected Net MRC × ${programPeriod} months) - COGS (${fmtMoney(cogs, cur)}) = ${fmtMoney(marginPerDevice, cur)}`)
+      breakdownSteps.push(`BEP = COGS (${fmtMoney(cogs, cur, usdRate)}) ÷ Expected Net MRC (${fmtMoney(expectedNetMRC, cur, usdRate)}) = ${bepMonths !== null ? fmtBEP(bepMonths) + ' months' : 'Not Reached'}`)
+      breakdownSteps.push(`Margin per Device = (Expected Net MRC × ${programPeriod} months) - COGS (${fmtMoney(cogs, cur, usdRate)}) = ${fmtMoney(marginPerDevice, cur, usdRate)}`)
     }
 
-    breakdownSteps.push(`Total Margin = Margin per Device (${fmtMoney(marginPerDevice, cur)}) × Total Unit (${totalUnit}) = ${fmtMoney(totalMargin, cur)}`)
+    breakdownSteps.push(`Total Margin = Margin per Device (${fmtMoney(marginPerDevice, cur, usdRate)}) × Total Unit (${totalUnit}) = ${fmtMoney(totalMargin, cur, usdRate)}`)
 
     Object.assign(result, {
       totalRevenue: fmtNum(totalMRCRevenue),

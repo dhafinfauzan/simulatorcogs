@@ -37,6 +37,7 @@ export default function Simulator() {
   const [activeDays, setActiveDays] = useState(22)
   const [activeRate, setActiveRate] = useState(50)
   const [currency, setCurrency] = useState('idr')
+  const [usdRate, setUsdRate] = useState(16000)
 
   const [result, setResult] = useState(null)
   const [errors, setErrors] = useState([])
@@ -104,7 +105,8 @@ export default function Simulator() {
         setupFee: Number(setupFee || 0),
         activeDays: Number(activeDays),
         activeRate: Number(activeRate),
-        currency
+        currency,
+        usdRate: Number(usdRate)
       })
       setResult(res)
       setHasCalculated(true)
@@ -117,7 +119,7 @@ export default function Simulator() {
     } finally {
       setLoading(false)
     }
-  }, [scheme, totalUnit, programPeriod, cogs, otcPrice, dailyFee, dailyIncentive, setupFee, activeDays, activeRate, currency])
+  }, [scheme, totalUnit, programPeriod, cogs, otcPrice, dailyFee, dailyIncentive, setupFee, activeDays, activeRate, currency, usdRate])
 
   const calcTimer = useRef(null)
   useEffect(() => {
@@ -125,10 +127,11 @@ export default function Simulator() {
     clearTimeout(calcTimer.current)
     calcTimer.current = setTimeout(() => calculate(), 400)
     return () => clearTimeout(calcTimer.current)
-  }, [scheme, totalUnit, programPeriod, cogs, otcPrice, dailyFee, dailyIncentive, setupFee, activeDays, activeRate, currency, hasCalculated, calculate])
+  }, [scheme, totalUnit, programPeriod, cogs, otcPrice, dailyFee, dailyIncentive, setupFee, activeDays, activeRate, currency, usdRate, hasCalculated, calculate])
 
   const showOtc = scheme === 'otc'
   const showMrc = scheme === 'mrc'
+  const showUsd = currency === 'usd'
   const cur = currency === 'usd' ? '$' : 'Rp'
   const unitLabel = s => `${s} (${cur})`
 
@@ -194,6 +197,22 @@ export default function Simulator() {
                 ))}
               </div>
             </div>
+
+            {showUsd && (
+              <div className="mb-5">
+                <label className="input-label">USD Rate (1 USD = ? Rp)</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={usdRate}
+                  onChange={e => setUsdRate(e.target.value)}
+                  className="input-field font-mono"
+                />
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Semua hasil ditampilkan dalam USD dengan kurs ini (input tetap Rupiah).
+                </p>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4 mb-5">
               <div>
