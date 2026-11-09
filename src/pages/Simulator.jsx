@@ -6,8 +6,9 @@ import {
 import { api } from '../api/client.js'
 import { StatusBadge, BEPCard } from '../components/StatusBadge.jsx'
 
-function fmtRp(n) {
-  if (n === null || n === undefined || isNaN(n)) return '—'
+function fmtMoney(n, cur = 'Rp') {
+  if (n === null || n === undefined || isNaN(n)) return cur === '$' ? '$0.00' : 'Rp0'
+  if (cur === '$') return '$' + (Math.round(n * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
   return 'Rp' + Math.round(n).toLocaleString('id-ID')
 }
 
@@ -35,6 +36,7 @@ export default function Simulator() {
   const [setupFee, setSetupFee] = useState(0)
   const [activeDays, setActiveDays] = useState(22)
   const [activeRate, setActiveRate] = useState(50)
+  const [currency, setCurrency] = useState('idr')
 
   const [result, setResult] = useState(null)
   const [errors, setErrors] = useState([])
@@ -101,7 +103,8 @@ export default function Simulator() {
         dailyIncentive: Number(dailyIncentive),
         setupFee: Number(setupFee || 0),
         activeDays: Number(activeDays),
-        activeRate: Number(activeRate)
+        activeRate: Number(activeRate),
+        currency
       })
       setResult(res)
       setHasCalculated(true)
@@ -114,7 +117,7 @@ export default function Simulator() {
     } finally {
       setLoading(false)
     }
-  }, [scheme, totalUnit, programPeriod, cogs, otcPrice, dailyFee, dailyIncentive, setupFee, activeDays, activeRate])
+  }, [scheme, totalUnit, programPeriod, cogs, otcPrice, dailyFee, dailyIncentive, setupFee, activeDays, activeRate, currency])
 
   const calcTimer = useRef(null)
   useEffect(() => {
@@ -122,10 +125,12 @@ export default function Simulator() {
     clearTimeout(calcTimer.current)
     calcTimer.current = setTimeout(() => calculate(), 400)
     return () => clearTimeout(calcTimer.current)
-  }, [scheme, totalUnit, programPeriod, cogs, otcPrice, dailyFee, dailyIncentive, setupFee, activeDays, activeRate, hasCalculated, calculate])
+  }, [scheme, totalUnit, programPeriod, cogs, otcPrice, dailyFee, dailyIncentive, setupFee, activeDays, activeRate, currency, hasCalculated, calculate])
 
   const showOtc = scheme === 'otc'
   const showMrc = scheme === 'mrc'
+  const cur = currency === 'usd' ? '$' : 'Rp'
+  const unitLabel = s => `${s} (${cur})`
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto">
@@ -175,6 +180,21 @@ export default function Simulator() {
               </div>
             </div>
 
+            <div className="mb-5">
+              <label className="input-label">Currency</label>
+              <div className="flex gap-1.5 bg-slate-100 p-1 rounded-xl">
+                {[{ value: 'idr', label: 'IDR (Rp)' }, { value: 'usd', label: 'USD ($)' }].map(c => (
+                  <button
+                    key={c.value}
+                    onClick={() => setCurrency(c.value)}
+                    className={`segment-btn ${currency === c.value ? 'segment-btn-active' : ''}`}
+                  >
+                    {c.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-4 mb-5">
               <div>
                 <label className="input-label">Total Unit</label>
@@ -190,7 +210,7 @@ export default function Simulator() {
               </label>
               <input
                 type="text"
-                value={cogs ? fmtRp(cogs) : '—'}
+                value={cogs ? fmtMoney(cogs, cur) : '—'}
                 readOnly
                 className="input-field font-mono bg-slate-100 text-slate-500 cursor-not-allowed border-slate-200"
               />
@@ -204,7 +224,7 @@ export default function Simulator() {
               <div className="mb-5 pb-5 border-b border-slate-100">
                 <h3 className="text-xs font-bold text-brand-600 uppercase tracking-wider mb-3">OTC Input</h3>
                 <div>
-                  <label className="input-label">OTC Price per Device (Rp)</label>
+                  <label className="input-label">OTC Price per Device ({cur})</label>
                   <input type="number" min="0" value={otcPrice} onChange={e => setOtcPrice(e.target.value)} className="input-field font-mono" />
                 </div>
               </div>
@@ -224,7 +244,7 @@ export default function Simulator() {
                   </div>
                   <div className="col-span-2">
                     <label className="input-label flex items-center justify-between">
-                      <span>Setup Fee / DP per Unit (Rp)</span>
+                      <span>Setup Fee / DP per Unit ({cur})</span>
                       <span className="text-[11px] font-medium text-brand-600 bg-brand-50 border border-brand-200 px-2 py-0.5 rounded-full">Opsional</span>
                     </label>
                     <input
@@ -240,11 +260,11 @@ export default function Simulator() {
                     </p>
                   </div>
                   <div>
-                    <label className="input-label">Daily Fee (Rp)</label>
+                    <label className="input-label">Daily Fee ({cur})</label>
                     <input type="number" min="0" value={dailyFee} onChange={e => setDailyFee(e.target.value)} className="input-field font-mono" />
                   </div>
                   <div>
-                    <label className="input-label">Daily Incentive (Rp)</label>
+                    <label className="input-label">Daily Incentive ({cur})</label>
                     <input type="number" min="0" value={dailyIncentive} onChange={e => setDailyIncentive(e.target.value)} className="input-field font-mono" />
                   </div>
                   <div>
@@ -306,24 +326,24 @@ export default function Simulator() {
               />
 
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <StatCard icon={DollarSign} label="Total Revenue" value={fmtRp(result.totalRevenue)} color="brand" />
-                <StatCard icon={Wallet} label="Total Cost" value={fmtRp(result.totalCost)} color="slate" />
+                <StatCard icon={DollarSign} label="Total Revenue" value={fmtMoney(result.totalRevenue, cur)} color="brand" />
+                <StatCard icon={Wallet} label="Total Cost" value={fmtMoney(result.totalCost, cur)} color="slate" />
                 <StatCard
                   icon={result.totalMargin >= 0 ? TrendingUp : TrendingDown}
                   label="Total Margin"
-                  value={fmtRp(result.totalMargin)}
+                  value={fmtMoney(result.totalMargin, cur)}
                   color={result.totalMargin >= 0 ? 'emerald' : 'red'}
                 />
                 <StatCard
                   icon={Percent}
                   label="Margin per Device"
-                  value={fmtRp(result.marginPerDevice)}
+                  value={fmtMoney(result.marginPerDevice, cur)}
                   color={result.marginPerDevice >= 0 ? 'emerald' : 'red'}
                 />
                 {showMrc && (
                   <>
-                    <StatCard icon={Zap} label="Gross MRC / month" value={fmtRp(result.grossMRC)} color="brand" sublabel="per active device" />
-                    <StatCard icon={TrendingUp} label="Net MRC / month" value={fmtRp(result.netMRC)} color="emerald" sublabel="per active device" />
+                    <StatCard icon={Zap} label="Gross MRC / month" value={fmtMoney(result.grossMRC, cur)} color="brand" sublabel="per active device" />
+                    <StatCard icon={TrendingUp} label="Net MRC / month" value={fmtMoney(result.netMRC, cur)} color="emerald" sublabel="per active device" />
                     <StatCard
                       icon={Users}
                       label="Avg Active Units"
@@ -335,7 +355,7 @@ export default function Simulator() {
                       <StatCard
                         icon={DollarSign}
                         label="Setup Fee (DP)"
-                        value={fmtRp(result.setupFee)}
+                        value={fmtMoney(result.setupFee, cur)}
                         color="brand"
                         sublabel="Upfront per device"
                       />
